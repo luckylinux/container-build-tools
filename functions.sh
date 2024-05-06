@@ -1,5 +1,86 @@
 #!/bin/bash
 
+# Print Debug Message if Environment DEBUG_CONTAINER is set to something
+debug_message() {
+   # Debug Message processes all arguments
+   local lmessage="${*}"
+
+   # Calling Stack
+   #local lcallingstack=("${FUNCNAME[@]:1}")
+   #local lstack="${FUNCNAME[@]}"
+   local lstack="${FUNCNAME}"
+
+   # Print Stack
+   #echo "Calling Debug from <${FUNCNAME[1]}>" >&2
+   #echo "Calling Stack Size: <${#FUNCNAME[@]}>" >&2
+
+   # Check if Environment Variable is Set
+   if [[ -n "${DEBUG_CONTAINER}" ]]
+   then
+      # Show the Debug Message
+      echo "${lmessage}" >&2
+
+      if [[ -n "${DEBUG_CONTAINER_STACK}" ]]
+      then
+         # Show the Debug Stack
+         echo "Call Stack:" >&2
+
+         # Show the Debug Stack
+         debug_stack "${lstack}"
+      fi
+   fi
+}
+
+
+# Print Stack Size
+debug_stack() {
+   # Debug Stack Local Variable
+   #local lstack="${*}"
+   local lstack=("${FUNCNAME[@]:1}")
+
+   # Number of Elements
+   local lnum=${#lstack[@]}
+
+   # Debug
+   #echo "${FUNCNAME[0]} - Stack has <${lnum}> Elements."
+
+   #echo "First: ${lstack[0]}"
+   #echo "Second: ${lstack[1]}"
+   #echo "Third: ${lstack[2]}"
+
+   # Last Index
+   local llast=$((lnum-1))
+
+   # Iterate
+   local lindex=0
+   local lindent=""
+   for lindex in $(seq 0 ${llast})
+   do
+      lindent=$(repeat_character "\t" "${lindex}")
+      echo -e "${lindent} [${lindex}] ${lstack[${lindex}]}" >&2
+   done
+}
+
+
+# Repeat Character N times
+repeat_character() {
+   # Character to repeat
+   local lcharacter=${1}
+
+   # Number of Repetitions
+   local lrepetitions=${2}
+
+   # Print using Brace Expansion
+   #for i in {1 ... ${lrepetitions}}
+   for i in $(seq 1 1 ${lrepetitions})
+   do
+       echo -n "${lcharacter}"
+   done
+}
+
+
+
+
 engine_exists() {
     local lengine=$1
 
@@ -149,19 +230,50 @@ run_local_registry() {
    # Store Exists Code
    lexistscode=$?
 
+   # Debug
+   debug_message "${FUNCNAME[0]} - Exists Code is ${lexistscode}"
+
    # Check if Container is Running
    container_is_running "registry" "${lengine}"
 
    # Store Running Code
    lisrunningcode=$?
 
-   if [[ $lexistscode -ne 0 ]]
+   # Debug
+   debug_message "${FUNCNAME[0]} - Running Code is ${lisrunningcode}"
+
+   if [[ $lexistscode -eq 0 ]]
    then
+       # Container Exists
        if [[ $lisrunningcode -ne 0 ]]
        then
+          # Container is NOT currently running
+
+          # Debug
+          debug_message "${FUNCNAME[0]} - Container is NOT currently running"
+
+          # Echo
+          echo "${lengine}: Run Container <registry>"
+
           # Run a Local Registry WITHOUT Persistent Data Storage
-          ${lengine} run -d -p 5000:5000 --name registry registry:2
+          # Replace the existing Container
+          ${lengine} run --replace -d -p 0.0.0.0:5000:5000 --name registry registry:2
+       else
+          # Debug
+          debug_message "${FUNCNAME[0]} - Container is already running. No need fur further Action."
        fi
+   else
+       # Container does NOT exist
+
+       # Debug
+       debug_message "${FUNCNAME[0]} - Container does NOT currently exist"
+
+       # Echo
+       echo "${lengine}: Run Container <registry>"
+
+       # Start Container
+       # Run a Local Registry WITHOUT Persistent Data Storage
+       ${lengine} run -d -p 0.0.0.0:5000:5000 --name registry registry:2
    fi
 }
 
