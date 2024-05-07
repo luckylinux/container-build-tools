@@ -277,3 +277,22 @@ run_local_registry() {
    fi
 }
 
+
+upload_to_local_registry() {
+   # Input Parameters
+   local limage="$1"
+   local lengine="$2"
+
+   # Echo
+   echo "Tag image <${limage}> and pushing it to Local Registry <localhost:5000/local/${limage}>"
+
+   # Tag the Image
+   ${lengine} tag ${limage} localhost:5000/local/${limage}
+
+   # Push the locally built Image to the Local Registry
+   # With Debugging
+   #${lengine} push --log-level debug --tls-verify=false localhost:5000/local/${limage}
+
+   # Without Debugging
+   ${lengine} push --tls-verify=false localhost:5000/local/${limage}
+}
